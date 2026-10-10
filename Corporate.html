@@ -1,0 +1,247 @@
+
+
+<div class="d-flex justify-content-between align-items-center">
+    <div>
+        <h2>Reactivation</h2>
+        <p class="text-muted">Client Reactivation Records</p>
+    </div>
+
+    <div class="no-print d-flex align-items-center gap-2 flex-wrap">
+        <a
+            href="{% url 'reactivation_export' %}?start_date={{ selected_start_date|urlencode }}&end_date={{ selected_end_date|urlencode }}&local={{ selected_local|default:''|urlencode }}&search={{ selected_search|urlencode }}"
+            class="btn btn-outline-success"
+            title="Export filtered reactivations to Google Sheets-compatible CSV"
+        >
+            <i class="bi bi-filetype-csv me-1"></i> Export for Google Sheets
+        </a>
+        <a
+            href="?{% if list_query %}{{ list_query }}&{% endif %}all=1"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-outline-secondary"
+            title="Print all records matching the current filters"
+        >
+            Print / PDF
+        </a>
+    </div>
+</div>
+
+
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+
+        <!-- Filters -->
+        <form method="GET" class="row g-3 mb-4 no-print">
+            <div class="col-md-3">
+                <label for="searchFilter" class="form-label">
+                    Account/Client
+                </label>
+                <input
+                    type="text"
+                    id="searchFilter"
+                    name="search"
+                    class="form-control"
+                    placeholder="Account ID or Client Name"
+                    value="{{ selected_search }}"
+                >
+            </div>
+
+            <div class="col-md-2">
+                <label for="startDate" class="form-label">
+                    From
+                </label>
+                <input
+                    type="date"
+                    id="startDate"
+                    name="start_date"
+                    class="form-control"
+                    value="{{ selected_start_date }}"
+                >
+            </div>
+
+            <div class="col-md-2">
+                <label for="endDate" class="form-label">
+                    To
+                </label>
+                <input
+                    type="date"
+                    id="endDate"
+                    name="end_date"
+                    class="form-control"
+                    value="{{ selected_end_date }}"
+                >
+            </div>
+
+            <div class="col-md-3">
+                <label for="localFilter" class="form-label">
+                    Local
+                </label>
+                <select
+                    id="localFilter"
+                    name="local"
+                    class="form-select"
+                >
+                    <option value="">
+                        All Locals
+                    </option>
+
+                    {% for local in locals %}
+                        <option
+                            value="{{ local.id }}"
+                            {% if selected_local == local.id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ local.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button
+                    type="submit"
+                    class="btn btn-primary flex-grow-1"
+                >
+                    Filter
+                </button>
+                <a
+                    href="{% url 'reactivation_list' %}"
+                    class="btn btn-outline-secondary"
+                >
+                    Clear
+                </a>
+            </div>
+        </form>
+
+        <!-- Counter -->
+        <div class="row g-3 mb-4 activation-summary">
+
+            <div class="col-md-4">
+                <div class="card border-0 bg-light">
+                    <div class="card-body py-3">
+                        <small class="text-muted">Total Entries</small>
+                        <h4 class="mb-0">
+                            {{ total_entries }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 bg-success-subtle">
+                    <div class="card-body py-3">
+                        <small class="text-muted">Reactivated</small>
+                        <h4 class="mb-0">
+                            {{ total_reactivated }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 bg-warning-subtle">
+                    <div class="card-body py-3">
+                        <small class="text-muted">Processing</small>
+                        <h4 class="mb-0">
+                            {{ total_processing }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- Reactivation Records Table -->
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Account</th>
+                        <th>Client</th>
+                        <th>Local</th>
+                        <th>
+                            <a
+                                class="text-dark text-decoration-none"
+                                href="?search={{ selected_search|urlencode }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}&local={{ selected_local }}&sort=status&direction={% if selected_sort == 'status' and selected_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            >
+                                Status
+
+                                {% if selected_sort == "status" %}
+                                    {% if selected_direction == "asc" %}▲{% else %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Remarks</th>
+                        <th>
+                            <a
+                                class="text-dark text-decoration-none"
+                                href="?search={{ selected_search|urlencode }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}&local={{ selected_local }}&sort=processed_by&direction={% if selected_sort == 'processed_by' and selected_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            >
+                                Processed By
+
+                                {% if selected_sort == "processed_by" %}
+                                    {% if selected_direction == "asc" %}▲{% else %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        {% if perms.records.change_requestrecord %}
+                            <th class="no-print">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for reactivation in reactivations %}
+
+                    <tr>
+                        <td>{{ reactivation.request_date }}</td>
+                        <td>{{ reactivation.account_number }}</td>
+                        <td>{{ reactivation.client_name }}</td>
+                        <td>{{ reactivation.local }}</td>
+                        <td>
+                            {% if reactivation.status == "completed" %}
+                                <span class="badge bg-success">
+                                    Reactivated
+                                </span>
+                            {% elif reactivation.status == "processing" %}
+                                <span class="badge bg-warning text-dark">
+                                    Processing
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ reactivation.remarks|default:"-" }}</td>
+                        <td>{{ reactivation.processed_by|default:"-" }}</td>
+                        {% if perms.records.change_requestrecord %}
+                        <td class="no-print">
+                            <a
+                                href="{% url 'request_edit' reactivation.id %}"
+                                class="btn btn-sm btn-outline-primary"
+                            >
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No reactivation records found.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+</div>
+
